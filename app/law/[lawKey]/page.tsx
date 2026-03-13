@@ -137,9 +137,9 @@ export default async function LawDetailPage({ params }: PageProps) {
       <React.Fragment key={`wrap-${article.id}`}>
         {shouldShowChapterTitle && (
           // 장(Chapter) 제목 블록
-          <div className="mt-10 mb-6">
+          <div className="mt-10 mb-10">
             {/* mt-10 = 위쪽 여백 (이전 조문과 장 제목 사이 간격)
-                mb-6  = 장 제목과 다음 조문 사이 간격 */}
+                mb-10  = 장 제목과 다음 조문 사이 간격 */}
             <h2 className="text-base font-semibold tracking-tight text-zinc-500">
               {pendingChapterTitle}
             </h2>
