@@ -1,23 +1,7 @@
 // law_web/app/law/[lawkey]/page.tsx
 
 import React from "react";
-
-async function getLawDetail(lawKey: string) {
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
-
-  const res = await fetch(`${baseUrl}/api/law/${lawKey}`, {
-    cache: "no-store",
-  });
-
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`법령 상세 조회 실패: ${res.status} ${text}`);
-  }
-
-  return res.json();
-}
+import { getLawDetailFromDb } from "@/lib/law-detail";
 
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -108,7 +92,7 @@ type PageProps = {
 
 export default async function LawDetailPage({ params }: PageProps) {
   const { lawKey } = await params;
-  const data = await getLawDetail(lawKey);
+  const data = await getLawDetailFromDb(lawKey);
 
   const { law, articles, addenda, notes } = data;
 
@@ -152,11 +136,17 @@ export default async function LawDetailPage({ params }: PageProps) {
     articleBlocks.push(
       <React.Fragment key={`wrap-${article.id}`}>
         {shouldShowChapterTitle && (
+          // 장(Chapter) 제목 블록
           <div className="mt-10 mb-6">
+            {/* mt-10 = 위쪽 여백 (이전 조문과 장 제목 사이 간격)
+                mb-6  = 장 제목과 다음 조문 사이 간격 */}
             <h2 className="text-base font-semibold tracking-tight text-zinc-500">
               {pendingChapterTitle}
             </h2>
+
+            {/* 장 제목 밑줄과 제목 사이 간격 */}
             <div className="mt-1 border-b border-zinc-500" />
+            {/* mt-1 = 장 제목과 밑줄 사이 간격 */}
           </div>
         )}
 
@@ -164,20 +154,29 @@ export default async function LawDetailPage({ params }: PageProps) {
           key={article.id}
           id={article.full_path}
         >
+          {/* 조문 제목 */}
           <div className="mb-6">
+            {/* mb-6 = 조문 제목과 조문 본문 사이 간격 */}
             <h3 className="text-xl font-semibold">
               {article.full_path}  {article.article_title ? `${article.article_title}` : ""}
             </h3>
           </div>
 
+          {/* 조문 본문 */}
           {shouldShowArticleText && (
             <p className="mb-4 whitespace-pre-wrap leading-7 text-zinc-800">
+              {/* mb-4 = 조문 본문과 다음 블록(항/호) 사이 간격 */}
+              {/* leading-7 = 줄 간격 */}
               {renderAmendmentText(cleanedText)}
             </p>
           )}
 
+          {/* 조문 바로 아래 호(① 없이 바로 1. 이런 경우) */}
           {article.direct_items?.length > 0 && (
             <div className="space-y-6 pl-4">
+              {/* space-y-6 = 호 ↔ 호 사이 세로 간격 */}
+              {/* pl-4 = 조문 본문 대비 들여쓰기 */}
+
               {article.direct_items.map((item: any) => (
                 <div key={item.id}>
                   <p className="whitespace-pre-wrap leading-7">
@@ -186,6 +185,10 @@ export default async function LawDetailPage({ params }: PageProps) {
 
                   {item.subitems?.length > 0 && (
                     <div className="mt-2 space-y-2 pl-6">
+                      {/* mt-2 = 호와 목 사이 간격 */}
+                      {/* space-y-2 = 목 ↔ 목 사이 간격 */}
+                      {/* pl-6 = 목 들여쓰기 */}
+
                       {item.subitems.map((sub: any) => (
                         <p
                           key={sub.id}
@@ -201,16 +204,26 @@ export default async function LawDetailPage({ params }: PageProps) {
             </div>
           )}
 
+          {/* 항 구조 */}
           {article.paragraphs?.length > 0 && (
             <div className="space-y-16">
+              {/* space-y-16 = 항(①②③) ↔ 항 사이 간격 */}
+
               {article.paragraphs.map((para: any) => (
                 <div key={para.id} className="pl-2">
+                  {/* pl-2 = 조문 본문 대비 항 들여쓰기 */}
+
                   <p className="whitespace-pre-wrap leading-7 text-zinc-800">
+                    {/* leading-7 = 항 내부 줄 간격 */}
                     {renderAmendmentText(para.paragraph_text)}
                   </p>
 
                   {para.items?.length > 0 && (
                     <div className="mt-6 space-y-6 pl-6">
+                      {/* mt-6 = 항과 호 사이 간격 */}
+                      {/* space-y-6 = 호 ↔ 호 사이 간격 */}
+                      {/* pl-6 = 호 들여쓰기 */}
+
                       {para.items.map((item: any) => (
                         <div key={item.id}>
                           <p className="whitespace-pre-wrap leading-7 text-zinc-700">
@@ -219,6 +232,10 @@ export default async function LawDetailPage({ params }: PageProps) {
 
                           {item.subitems?.length > 0 && (
                             <div className="mt-2 space-y-2 pl-6">
+                              {/* mt-2 = 호와 목 사이 간격 */}
+                              {/* space-y-2 = 목 ↔ 목 사이 간격 */}
+                              {/* pl-6 = 목 들여쓰기 */}
+
                               {item.subitems.map((sub: any) => (
                                 <p
                                   key={sub.id}
@@ -237,8 +254,11 @@ export default async function LawDetailPage({ params }: PageProps) {
               ))}
             </div>
           )}
-                    {article.article_reference && (
+
+          {/* 조문 끝에 붙는 <개정> <본조신설> 같은 문구 */}
+          {article.article_reference && (
             <p className="mt-4 whitespace-pre-wrap text-base text-zinc-400">
+              {/* mt-4 = 조문 마지막 내용과 개정표시 사이 간격 */}
               {article.article_reference}
             </p>
           )}
