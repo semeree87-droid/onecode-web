@@ -4,14 +4,16 @@ import React from "react";
 
 async function getLawDetail(lawKey: string) {
   const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
 
   const res = await fetch(`${baseUrl}/api/law/${lawKey}`, {
     cache: "no-store",
   });
 
   if (!res.ok) {
-    throw new Error("법령 상세 조회 실패");
+    const text = await res.text();
+    throw new Error(`법령 상세 조회 실패: ${res.status} ${text}`);
   }
 
   return res.json();
